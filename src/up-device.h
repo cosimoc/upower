@@ -23,7 +23,6 @@
 #define __UP_DEVICE_H__
 
 #include <glib-object.h>
-#include <dbus/dbus-glib.h>
 
 #include "up-daemon.h"
 
@@ -58,17 +57,6 @@ typedef struct
 						 gboolean	*online);
 } UpDeviceClass;
 
-typedef enum
-{
-	UP_DEVICE_ERROR_GENERAL,
-	UP_DEVICE_NUM_ERRORS
-} UpDeviceError;
-
-#define UP_DEVICE_ERROR up_device_error_quark ()
-#define UP_DEVICE_TYPE_ERROR (up_device_error_get_type ())
-
-GQuark		 up_device_error_quark		(void);
-GType		 up_device_error_get_type	(void);
 GType		 up_device_get_type		(void);
 UpDevice	*up_device_new			(void);
 
@@ -86,18 +74,6 @@ gboolean	 up_device_get_on_battery	(UpDevice	*device,
 gboolean	 up_device_get_online		(UpDevice	*device,
 						 gboolean	*online);
 gboolean	 up_device_refresh_internal	(UpDevice	*device);
-
-/* exported methods */
-gboolean	 up_device_refresh		(UpDevice		*device,
-						 DBusGMethodInvocation	*context);
-gboolean	 up_device_get_history		(UpDevice		*device,
-						 const gchar		*type,
-						 guint			 timespan,
-						 guint			 resolution,
-						 DBusGMethodInvocation	*context);
-gboolean	 up_device_get_statistics	(UpDevice		*device,
-						 const gchar		*type,
-						 DBusGMethodInvocation	*context);
 
 G_END_DECLS
 

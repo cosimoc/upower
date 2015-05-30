@@ -27,9 +27,10 @@ AM_CPPFLAGS = \
 UPOWER_LIBS = $(top_builddir)/libupower-glib/libupower-glib.la
 
 BUILT_SOURCES =							\
-	up-device-glue.h					\
 	up-daemon-generated.h					\
 	up-daemon-generated.c					\
+	up-device-generated.h					\
+	up-device-generated.c					\
 	up-kbd-backlight-generated.h				\
 	up-kbd-backlight-generated.c				\
 	up-wakeups-generated.h					\
@@ -50,8 +51,12 @@ up-daemon-generated.h: org.freedesktop.UPower.xml Makefile.am
 	--annotate "org.freedesktop.UPower" "org.gtk.GDBus.C.Name" ExportedDaemon \
 	$(srcdir)/org.freedesktop.UPower.xml
 
-up-device-glue.h: org.freedesktop.UPower.Device.xml Makefile.am
-	dbus-binding-tool --prefix=up_device --mode=glib-server --output=up-device-glue.h $(srcdir)/org.freedesktop.UPower.Device.xml
+up-device-generated.h: org.freedesktop.UPower.Device.xml Makefile.am
+	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower.Device. \
+	--generate-c-code up-device-generated \
+	--c-namespace Up \
+	--annotate "org.freedesktop.UPower.Device" "org.gtk.GDBus.C.Name" ExportedDevice \
+	$(srcdir)/org.freedesktop.UPower.Device.xml
 
 up-kbd-backlight-generated.h: org.freedesktop.UPower.KbdBacklight.xml Makefile.am
 	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower.KbdBacklight. \
