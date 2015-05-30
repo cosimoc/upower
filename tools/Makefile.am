@@ -6,7 +6,6 @@ AM_CPPFLAGS = \
 	-DG_LOG_DOMAIN=\"UPower\"				\
 	-I$(top_srcdir)						\
 	-I$(top_srcdir)/libupower-glib				\
-	$(DBUS_GLIB_CFLAGS)					\
 	$(POLKIT_DBUS_CFLAGS)					\
 	$(GLIB_CFLAGS)
 
@@ -26,7 +25,6 @@ upower_LDFLAGS =
 	$(PIE_LDFLAGS)
 
 upower_LDADD = 						\
-	$(DBUS_GLIB_LIBS)				\
 	$(UPOWER_LIBS)					\
 	$(POLKIT_DBUS_LIBS)
 

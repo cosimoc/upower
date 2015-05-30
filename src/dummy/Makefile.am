@@ -5,7 +5,6 @@ AM_CPPFLAGS = \
 	-DUP_COMPILATION					\
 	-DG_LOG_DOMAIN=\"UPower-Dummy\"				\
 	-I$(top_srcdir)/libupower-glib				\
-	$(DBUS_GLIB_CFLAGS)					\
 	$(POLKIT_CFLAGS)					\
 	$(GLIB_CFLAGS)
 

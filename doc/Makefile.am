@@ -31,7 +31,6 @@ IGNORE_HFILES= \
 # CFLAGS and LDFLAGS for compiling scan program. Only needed
 # if $(DOC_MODULE).types is non-empty.
 AM_CPPFLAGS = \
-	$(DBUS_GLIB_CFLAGS)		\
 	$(GLIB_CFLAGS)			\
 	-I$(top_srcdir)/libupower-glib 		\
 	-I$(top_builddir)/libupower-glib	\
@@ -43,7 +42,6 @@ UPOWER_GLIB_LIBS =						\
 
 GTKDOC_LIBS = 			\
 	$(UPOWER_GLIB_LIBS)					\
-	$(DBUS_GLIB_LIBS)	\
 	$(NULL)
 
 # Extra options to supply to gtkdoc-mkdb

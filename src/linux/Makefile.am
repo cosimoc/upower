@@ -8,7 +8,6 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libupower-glib				\
 	$(USB_CFLAGS)						\
 	$(GIO_CFLAGS)						\
-	$(DBUS_GLIB_CFLAGS)					\
 	$(GUDEV_CFLAGS)						\
 	$(POLKIT_CFLAGS)					\
 	$(GLIB_CFLAGS)						\
