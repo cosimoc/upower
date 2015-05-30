@@ -45,9 +45,6 @@
 #include "up-device-idevice.h"
 #endif /* HAVE_IDEVICE */
 
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
-
 static void	up_backend_class_init	(UpBackendClass	*klass);
 static void	up_backend_init	(UpBackend		*backend);
 static void	up_backend_finalize	(GObject		*object);
@@ -65,7 +62,6 @@ struct UpBackendPrivate
 	GUdevClient		*gudev_client;
 	UpDeviceList		*managed_devices;
 	UpConfig		*config;
-	DBusConnection		*connection;
 	GDBusProxy		*logind_proxy;
 };
 
