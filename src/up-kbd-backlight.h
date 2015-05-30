@@ -24,7 +24,6 @@
 #define __UP_KBD_BACKLIGHT_H
 
 #include <glib-object.h>
-#include <dbus/dbus-glib.h>
 
 G_BEGIN_DECLS
 
@@ -46,22 +45,10 @@ typedef struct
 typedef struct
 {
 	GObjectClass	parent_class;
-	void		(* brightness_changed)		(UpKbdBacklight	*kbd_backlight,
-							 gint		 value);
 } UpKbdBacklightClass;
 
 UpKbdBacklight	*up_kbd_backlight_new			(void);
 GType		 up_kbd_backlight_get_type		(void);
-
-gboolean	 up_kbd_backlight_set_brightness	(UpKbdBacklight	*kbd_backlight,
-							 gint		 value,
-							 GError		**error);
-gboolean	 up_kbd_backlight_get_brightness	(UpKbdBacklight	*kbd_backlight,
-							 gint		*value,
-							 GError		**error);
-gboolean	 up_kbd_backlight_get_max_brightness	(UpKbdBacklight	*kbd_backlight,
-							 gint		*value,
-							 GError		**error);
 
 G_END_DECLS
 

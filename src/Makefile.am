@@ -19,6 +19,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libupower-glib				\
 	-I$(top_srcdir)						\
 	$(GIO_CFLAGS)						\
+	$(GIO_UNIX_CFLAGS)					\
 	$(DBUS_GLIB_CFLAGS)					\
 	$(GUDEV_CFLAGS)						\
 	$(GLIB_CFLAGS)
@@ -28,7 +29,8 @@ UPOWER_LIBS = $(top_builddir)/libupower-glib/libupower-glib.la
 BUILT_SOURCES =							\
 	up-daemon-glue.h					\
 	up-device-glue.h					\
-	up-kbd-backlight-glue.h					\
+	up-kbd-backlight-generated.h				\
+	up-kbd-backlight-generated.c				\
 	up-wakeups-glue.h					\
 	up-marshal.h						\
 	up-marshal.c
@@ -45,8 +47,12 @@ up-daemon-glue.h: org.freedesktop.UPower.xml Makefile.am
 up-device-glue.h: org.freedesktop.UPower.Device.xml Makefile.am
 	dbus-binding-tool --prefix=up_device --mode=glib-server --output=up-device-glue.h $(srcdir)/org.freedesktop.UPower.Device.xml
 
-up-kbd-backlight-glue.h: org.freedesktop.UPower.KbdBacklight.xml Makefile.am
-	dbus-binding-tool --prefix=up_kbd_backlight --mode=glib-server --output=up-kbd-backlight-glue.h $(srcdir)/org.freedesktop.UPower.KbdBacklight.xml
+up-kbd-backlight-generated.h: org.freedesktop.UPower.KbdBacklight.xml Makefile.am
+	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower.KbdBacklight. \
+	--generate-c-code up-kbd-backlight-generated \
+	--c-namespace Up \
+	--annotate "org.freedesktop.UPower.KbdBacklight" "org.gtk.GDBus.C.Name" ExportedKbdBacklight \
+	$(srcdir)/org.freedesktop.UPower.KbdBacklight.xml
 
 up-wakeups-glue.h: org.freedesktop.UPower.Wakeups.xml Makefile.am
 	dbus-binding-tool --prefix=up_wakeups --mode=glib-server --output=up-wakeups-glue.h $(srcdir)/org.freedesktop.UPower.Wakeups.xml
@@ -88,6 +94,7 @@ upowerd_LDADD =							\
 	-lm							\
 	$(USB_LIBS)						\
 	$(GIO_LIBS)						\
+	$(GIO_UNIX_LIBS)					\
 	$(DBUS_GLIB_LIBS)					\
 	$(UPOWER_LIBS)
 
