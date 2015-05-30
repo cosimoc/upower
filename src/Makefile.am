@@ -31,7 +31,8 @@ BUILT_SOURCES =							\
 	up-device-glue.h					\
 	up-kbd-backlight-generated.h				\
 	up-kbd-backlight-generated.c				\
-	up-wakeups-glue.h					\
+	up-wakeups-generated.h					\
+	up-wakeups-generated.c					\
 	up-marshal.h						\
 	up-marshal.c
 
@@ -54,8 +55,12 @@ up-kbd-backlight-generated.h: org.freedesktop.UPower.KbdBacklight.xml Makefile.a
 	--annotate "org.freedesktop.UPower.KbdBacklight" "org.gtk.GDBus.C.Name" ExportedKbdBacklight \
 	$(srcdir)/org.freedesktop.UPower.KbdBacklight.xml
 
-up-wakeups-glue.h: org.freedesktop.UPower.Wakeups.xml Makefile.am
-	dbus-binding-tool --prefix=up_wakeups --mode=glib-server --output=up-wakeups-glue.h $(srcdir)/org.freedesktop.UPower.Wakeups.xml
+up-wakeups-generated.h: org.freedesktop.UPower.Wakeups.xml Makefile.am
+	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower.Wakeups. \
+	--generate-c-code up-wakeups-generated \
+	--c-namespace Up \
+	--annotate "org.freedesktop.UPower.Wakeups" "org.gtk.GDBus.C.Name" ExportedWakeups \
+	$(srcdir)/org.freedesktop.UPower.Wakeups.xml
 
 libexec_PROGRAMS = upowerd
 

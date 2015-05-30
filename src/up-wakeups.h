@@ -23,7 +23,6 @@
 #define __UP_WAKEUPS_H
 
 #include <glib-object.h>
-#include <dbus/dbus-glib.h>
 
 G_BEGIN_DECLS
 
@@ -45,21 +44,10 @@ typedef struct
 typedef struct
 {
 	GObjectClass	parent_class;
-	void		(* total_changed)		(UpWakeups	*wakeups,
-							 guint		 value);
-	void		(* data_changed)		(UpWakeups	*wakeups);
 } UpWakeupsClass;
 
 UpWakeups	*up_wakeups_new			(void);
-void		 up_wakeups_test			(gpointer	 user_data);
-
 GType		 up_wakeups_get_type			(void);
-gboolean	 up_wakeups_get_total			(UpWakeups	*wakeups,
-							 guint		*value,
-							 GError		**error);
-gboolean	 up_wakeups_get_data			(UpWakeups	*wakeups,
-							 GPtrArray	**requests,
-							 GError		**error);
 
 G_END_DECLS
 
