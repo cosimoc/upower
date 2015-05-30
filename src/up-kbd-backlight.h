@@ -23,7 +23,7 @@
 #ifndef __UP_KBD_BACKLIGHT_H
 #define __UP_KBD_BACKLIGHT_H
 
-#include <glib-object.h>
+#include <gio/gio.h>
 
 G_BEGIN_DECLS
 
@@ -49,6 +49,8 @@ typedef struct
 
 UpKbdBacklight	*up_kbd_backlight_new			(void);
 GType		 up_kbd_backlight_get_type		(void);
+void		 up_kbd_backlight_register 		(UpKbdBacklight *kbd_backlight,
+							 GDBusConnection *connection);
 
 G_END_DECLS
 

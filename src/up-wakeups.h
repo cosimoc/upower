@@ -22,7 +22,7 @@
 #ifndef __UP_WAKEUPS_H
 #define __UP_WAKEUPS_H
 
-#include <glib-object.h>
+#include <gio/gio.h>
 
 G_BEGIN_DECLS
 
@@ -47,7 +47,9 @@ typedef struct
 } UpWakeupsClass;
 
 UpWakeups	*up_wakeups_new			(void);
-GType		 up_wakeups_get_type			(void);
+GType		 up_wakeups_get_type		(void);
+void		 up_wakeups_register            (UpWakeups *wakeups,
+						 GDBusConnection *connection);
 
 G_END_DECLS
 

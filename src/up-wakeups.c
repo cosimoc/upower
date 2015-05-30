@@ -48,7 +48,6 @@ static gboolean	up_wakeups_timerstats_enable (UpWakeups *wakeups);
 struct UpWakeupsPrivate
 {
 	GPtrArray		*data;
-	GDBusConnection		*connection;
 	UpExportedWakeups	*skeleton;
 	guint			 total_old;
 	guint			 total_ave;
@@ -668,17 +667,8 @@ up_wakeups_class_init (UpWakeupsClass *klass)
 static void
 up_wakeups_init (UpWakeups *wakeups)
 {
-	GError *error = NULL;
-
 	wakeups->priv = UP_WAKEUPS_GET_PRIVATE (wakeups);
 	wakeups->priv->data = g_ptr_array_new_with_free_func ((GDestroyNotify) g_object_unref);
-
-	wakeups->priv->connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
-	if (error != NULL) {
-		g_warning ("Cannot connect to bus: %s", error->message);
-		g_error_free (error);
-		return;
-	}
 
 	wakeups->priv->skeleton = up_exported_wakeups_skeleton_new ();
 
@@ -692,17 +682,6 @@ up_wakeups_init (UpWakeups *wakeups)
 			  G_CALLBACK (up_wakeups_get_data), wakeups);
 	g_signal_connect (wakeups->priv->skeleton, "handle-get-total",
 			  G_CALLBACK (up_wakeups_get_total), wakeups);
-
-	/* register on the bus */
-	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (wakeups->priv->skeleton),
-					  wakeups->priv->connection,
-					  "/org/freedesktop/UPower/Wakeups",
-					  &error);
-
-	if (error != NULL) {
-		g_critical ("Cannot register wakeups on system bus: %s", error->message);
-		g_error_free (error);
-	}
 }
 
 /**
@@ -725,8 +704,6 @@ up_wakeups_finalize (GObject *object)
 	g_ptr_array_unref (wakeups->priv->data);
 	g_object_unref (wakeups->priv->skeleton);
 
-	g_clear_object (&wakeups->priv->connection);
-
 	G_OBJECT_CLASS (up_wakeups_parent_class)->finalize (object);
 }
 
@@ -739,3 +716,19 @@ up_wakeups_new (void)
 	return g_object_new (UP_TYPE_WAKEUPS, NULL);
 }
 
+void
+up_wakeups_register (UpWakeups *wakeups,
+		     GDBusConnection *connection)
+{
+	GError *error = NULL;
+
+	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (wakeups->priv->skeleton),
+					  connection,
+					  "/org/freedesktop/UPower/Wakeups",
+					  &error);
+
+	if (error != NULL) {
+		g_critical ("Cannot register wakeups on system bus: %s", error->message);
+		g_error_free (error);
+	}
+}

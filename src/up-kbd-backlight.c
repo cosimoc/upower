@@ -47,7 +47,6 @@ struct UpKbdBacklightPrivate
 	gint			 fd;
 	gint			 brightness;
 	gint			 max_brightness;
-	GDBusConnection		*connection;
 	UpExportedKbdBacklight  *skeleton;
 };
 
@@ -258,24 +257,8 @@ out:
 static void
 up_kbd_backlight_init (UpKbdBacklight *kbd_backlight)
 {
-	GError *error = NULL;
-
 	kbd_backlight->priv = UP_KBD_BACKLIGHT_GET_PRIVATE (kbd_backlight);
 
-	/* find a kbd backlight in sysfs */
-	if (!up_kbd_backlight_find (kbd_backlight)) {
-		g_debug ("cannot find a keyboard backlight");
-		return;
-	}
-
-	kbd_backlight->priv->connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
-	if (error != NULL) {
-		g_warning ("Cannot connect to bus: %s", error->message);
-		g_error_free (error);
-		return;
-	}
-
-	/* register on the bus */
 	kbd_backlight->priv->skeleton = up_exported_kbd_backlight_skeleton_new ();
 
 	g_signal_connect (kbd_backlight->priv->skeleton, "handle-get-brightness",
@@ -284,17 +267,6 @@ up_kbd_backlight_init (UpKbdBacklight *kbd_backlight)
 			  G_CALLBACK (up_kbd_backlight_get_max_brightness), kbd_backlight);
 	g_signal_connect (kbd_backlight->priv->skeleton, "handle-set-brightness",
 			  G_CALLBACK (up_kbd_backlight_set_brightness), kbd_backlight);
-
-	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (skeleton),
-					  kbd_backlight->priv->connection,
-					  "/org/freedesktop/UPower/KbdBacklight",
-					  &error);
-
-	if (error != NULL) {
-		g_warning ("Cannot export KbdBacklight object to bus: %s", error->message);
-		g_error_free (error);
-		return;
-	}
 }
 
 /**
@@ -315,9 +287,7 @@ up_kbd_backlight_finalize (GObject *object)
 	if (kbd_backlight->priv->fd >= 0)
 		close (kbd_backlight->priv->fd);
 
-	g_clear_object (&kbd_backlight->priv->skeleton);
-
-	g_clear_object (&kbd_backlight->priv->connection);
+	g_object_unref (kbd_backlight->priv->skeleton);
 
 	G_OBJECT_CLASS (up_kbd_backlight_parent_class)->finalize (object);
 }
@@ -331,3 +301,25 @@ up_kbd_backlight_new (void)
 	return g_object_new (UP_TYPE_KBD_BACKLIGHT, NULL);
 }
 
+void
+up_kbd_backlight_register (UpKbdBacklight *kbd_backlight,
+			   GDBusConnection *connection)
+{
+	GError *error = NULL;
+
+	/* find a kbd backlight in sysfs */
+	if (!up_kbd_backlight_find (kbd_backlight)) {
+		g_debug ("cannot find a keyboard backlight");
+		return;
+	}
+
+	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (kbd_backlight->priv->skeleton),
+					  connection,
+					  "/org/freedesktop/UPower/KbdBacklight",
+					  &error);
+
+	if (error != NULL) {
+		g_warning ("Cannot export KbdBacklight object to bus: %s", error->message);
+		g_error_free (error);
+	}
+}

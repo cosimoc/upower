@@ -29,64 +29,81 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <gio/gio.h>
 #include <glib.h>
 #include <glib-unix.h>
 #include <glib/gi18n-lib.h>
 #include <glib-object.h>
 #include <locale.h>
 
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
-
 #include "up-daemon.h"
 #include "up-kbd-backlight.h"
 #include "up-wakeups.h"
 
 #define DEVKIT_POWER_SERVICE_NAME "org.freedesktop.UPower"
-static GMainLoop *loop = NULL;
+
+typedef struct UpState {
+	UpKbdBacklight *kbd_backlight;
+	UpWakeups *wakeups;
+	UpDaemon *daemon;
+	GMainLoop *loop;
+} UpState;
+
+static void
+up_state_free (UpState *state)
+{
+	up_daemon_shutdown (state->daemon);
+
+	g_clear_object (&state->kbd_backlight);
+	g_clear_object (&state->wakeups);
+	g_clear_object (&state->daemon);
+	g_clear_pointer (&state->loop, g_main_loop_unref);
+
+	g_free (state);
+}
+
+static UpState *
+up_state_new (void)
+{
+	UpState *state = g_new0 (UpState, 1);
+
+	state->kbd_backlight = up_kbd_backlight_new ();
+	state->wakeups = up_wakeups_new ();
+	state->daemon = up_daemon_new ();
+	state->loop = g_main_loop_new (NULL, FALSE);
+
+	return state;
+}
 
 /**
- * up_main_acquire_name_on_proxy:
+ * up_main_bus_acquired:
  **/
-static gboolean
-up_main_acquire_name_on_proxy (DBusGProxy *bus_proxy, const gchar *name)
+static void
+up_main_bus_acquired (GDBusConnection *connection,
+		      const gchar *name,
+		      gpointer user_data)
 {
-	GError *error = NULL;
-	guint result;
-	gboolean ret = FALSE;
+	UpState *state = user_data;
 
-	if (bus_proxy == NULL)
-		goto out;
-
-	ret = dbus_g_proxy_call (bus_proxy, "RequestName", &error,
-				 G_TYPE_STRING, name,
-				 G_TYPE_UINT, 0,
-				 G_TYPE_INVALID,
-				 G_TYPE_UINT, &result,
-				 G_TYPE_INVALID);
-	if (!ret) {
-		if (error != NULL) {
-			g_warning ("Failed to acquire %s: %s", name, error->message);
-			g_error_free (error);
-		} else {
-			g_warning ("Failed to acquire %s", name);
-		}
-		goto out;
+	up_kbd_backlight_register (state->kbd_backlight, connection);
+	up_wakeups_register (state->wakeups, connection);
+	if (!up_daemon_startup (state->daemon, connection)) {
+		g_warning ("Could not startup; bailing out");
+		g_main_loop_quit (state->loop);
 	}
+}
 
-	/* already taken */
- 	if (result != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-		if (error != NULL) {
-			g_warning ("Failed to acquire %s: %s", name, error->message);
-			g_error_free (error);
-		} else {
-			g_warning ("Failed to acquire %s", name);
-		}
-		ret = FALSE;
-		goto out;
-	}
-out:
-	return ret;
+/**
+ * up_main_name_lost:
+ **/
+static void
+up_main_name_lost (GDBusConnection *connection,
+		   const gchar *name,
+		   gpointer user_data)
+{
+	UpState *state = user_data;
+	g_debug ("name lost, exiting");
+	g_main_loop_quit (state->loop);
 }
 
 /**
@@ -95,8 +112,9 @@ out:
 static gboolean
 up_main_sigint_cb (gpointer user_data)
 {
+	UpState *state = user_data;
 	g_debug ("Handling SIGINT");
-	g_main_loop_quit (loop);
+	g_main_loop_quit (state->loop);
 	return FALSE;
 }
 
@@ -106,9 +124,9 @@ up_main_sigint_cb (gpointer user_data)
  * Exits the main loop, which is helpful for valgrinding.
  **/
 static gboolean
-up_main_timed_exit_cb (GMainLoop *loop)
+up_main_timed_exit_cb (UpState *state)
 {
-	g_main_loop_quit (loop);
+	g_main_loop_quit (state->loop);
 	return FALSE;
 }
 
@@ -154,18 +172,12 @@ gint
 main (gint argc, gchar **argv)
 {
 	GError *error = NULL;
-	UpDaemon *daemon = NULL;
-	UpKbdBacklight *kbd_backlight = NULL;
-	UpWakeups *wakeups = NULL;
 	GOptionContext *context;
-	DBusGProxy *bus_proxy = NULL;
-	DBusGConnection *bus;
-	gboolean ret;
-	gint retval = 1;
 	gboolean timed_exit = FALSE;
 	gboolean immediate_exit = FALSE;
 	guint timer_id = 0;
 	gboolean verbose = FALSE;
+	UpState *state;
 
 	const GOptionEntry options[] = {
 		{ "timed-exit", '\0', 0, G_OPTION_ARG_NONE, &timed_exit,
@@ -222,75 +234,42 @@ main (gint argc, gchar **argv)
 				   NULL);
 	}
 
-	/* get bus connection */
-	bus = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
-	if (bus == NULL) {
-		g_warning ("Couldn't connect to system bus: %s", error->message);
-		g_error_free (error);
-		goto out;
-	}
-
-	/* get proxy */
-	bus_proxy = dbus_g_proxy_new_for_name (bus, DBUS_SERVICE_DBUS,
-					       DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS);
-	if (bus_proxy == NULL) {
-		g_warning ("Could not construct bus_proxy object; bailing out");
-		goto out;
-	}
-
-	/* aquire name */
-	ret = up_main_acquire_name_on_proxy (bus_proxy, DEVKIT_POWER_SERVICE_NAME);
-	if (!ret) {
-		g_warning ("Could not acquire name; bailing out");
-		goto out;
-	}
+	/* initialize state */
+	state = up_state_new ();
 
 	/* do stuff on ctrl-c */
 	g_unix_signal_add_full (G_PRIORITY_DEFAULT,
 				SIGINT,
 				up_main_sigint_cb,
-				loop,
+				state,
 				NULL);
+
+	/* acquire name */
+	g_bus_own_name (G_BUS_TYPE_SYSTEM,
+			DEVKIT_POWER_SERVICE_NAME,
+			G_BUS_NAME_OWNER_FLAGS_NONE,
+			up_main_bus_acquired,
+			NULL,
+			up_main_name_lost,
+			state, NULL);
 
 	g_debug ("Starting upowerd version %s", PACKAGE_VERSION);
 
-	kbd_backlight = up_kbd_backlight_new ();
-	wakeups = up_wakeups_new ();
-	daemon = up_daemon_new ();
-	loop = g_main_loop_new (NULL, FALSE);
-	ret = up_daemon_startup (daemon);
-	if (!ret) {
-		g_warning ("Could not startup; bailing out");
-		goto out;
-	}
-
 	/* only timeout and close the mainloop if we have specified it on the command line */
 	if (timed_exit) {
-		timer_id = g_timeout_add_seconds (30, (GSourceFunc) up_main_timed_exit_cb, loop);
+		timer_id = g_timeout_add_seconds (30, (GSourceFunc) up_main_timed_exit_cb, state);
 		g_source_set_name_by_id (timer_id, "[upower] up_main_timed_exit_cb");
 	}
 
 	/* immediatly exit */
 	if (immediate_exit) {
-		g_timeout_add (50, (GSourceFunc) up_main_timed_exit_cb, loop);
+		g_timeout_add (50, (GSourceFunc) up_main_timed_exit_cb, state);
 		g_source_set_name_by_id (timer_id, "[upower] up_main_timed_exit_cb");
 	}
 
 	/* wait for input or timeout */
-	g_main_loop_run (loop);
-	up_daemon_shutdown (daemon);
-	retval = 0;
-out:
-	if (kbd_backlight != NULL)
-		g_object_unref (kbd_backlight);
-	if (wakeups != NULL)
-		g_object_unref (wakeups);
-	if (daemon != NULL)
-		g_object_unref (daemon);
-	if (loop != NULL)
-		g_main_loop_unref (loop);
-	if (bus_proxy != NULL)
-		g_object_unref (bus_proxy);
-	return retval;
-}
+	g_main_loop_run (state->loop);
+	up_state_free (state);
 
+	return 0;
+}

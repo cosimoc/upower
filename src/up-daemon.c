@@ -41,7 +41,6 @@
 
 struct UpDaemonPrivate
 {
-	GDBusConnection		*connection;
 	UpExportedDaemon 	*skeleton;
 	UpConfig		*config;
 	UpBackend		*backend;
@@ -449,17 +448,11 @@ up_daemon_get_critical_action (UpExportedDaemon *skeleton,
  * up_daemon_register_power_daemon:
  **/
 static gboolean
-up_daemon_register_power_daemon (UpDaemon *daemon)
+up_daemon_register_power_daemon (UpDaemon *daemon,
+				 GDBusConnection *connection)
 {
 	GError *error = NULL;
 	UpDaemonPrivate *priv = daemon->priv;
-
-	priv->connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
-	if (error != NULL) {
-		g_critical ("error getting system bus: %s", error->message);
-		g_error_free (error);
-		return FALSE;
-	}
 
 	/* export our interface on the bus */
 	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (priv->skeleton),
@@ -483,7 +476,8 @@ up_daemon_register_power_daemon (UpDaemon *daemon)
  * up_daemon_startup:
  **/
 gboolean
-up_daemon_startup (UpDaemon *daemon)
+up_daemon_startup (UpDaemon *daemon,
+		   GDBusConnection *connection)
 {
 	gboolean ret;
 	gboolean on_battery;
@@ -1072,8 +1066,6 @@ up_daemon_finalize (GObject *object)
 
 	g_clear_pointer (&priv->poll_timeouts, g_hash_table_destroy);
 	g_clear_pointer (&priv->idle_signals, g_hash_table_destroy);
-
-	g_clear_object (&priv->connection);
 
 	g_object_unref (priv->skeleton);
 	g_object_unref (priv->power_devices);
