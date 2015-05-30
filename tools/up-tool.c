@@ -120,7 +120,6 @@ up_client_print (UpClient *client)
 {
 	gchar *daemon_version;
 	gboolean on_battery;
-	UpDeviceLevel warning_level;
 	gboolean lid_is_closed;
 	gboolean lid_is_present;
 	char *action;
@@ -166,7 +165,6 @@ static gboolean
 up_tool_do_monitor (UpClient *client)
 {
 	GPtrArray *devices;
-	GError *error = NULL;
 	guint i;
 
 	g_print ("Monitoring activity from the power daemon. Press Ctrl+C to cancel.\n");
