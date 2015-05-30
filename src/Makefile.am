@@ -27,8 +27,9 @@ AM_CPPFLAGS = \
 UPOWER_LIBS = $(top_builddir)/libupower-glib/libupower-glib.la
 
 BUILT_SOURCES =							\
-	up-daemon-glue.h					\
 	up-device-glue.h					\
+	up-daemon-generated.h					\
+	up-daemon-generated.c					\
 	up-kbd-backlight-generated.h				\
 	up-kbd-backlight-generated.c				\
 	up-wakeups-generated.h					\
@@ -42,8 +43,12 @@ up-marshal.h: up-marshal.list
 up-marshal.c: up-marshal.list
 	echo "#include \"up-marshal.h\"" > $@ && glib-genmarshal $< --prefix=up_marshal --body >> $@
 
-up-daemon-glue.h: org.freedesktop.UPower.xml Makefile.am
-	dbus-binding-tool --prefix=up_daemon --mode=glib-server --output=up-daemon-glue.h $(srcdir)/org.freedesktop.UPower.xml
+up-daemon-generated.h: org.freedesktop.UPower.xml Makefile.am
+	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower. \
+	--generate-c-code up-daemon-generated \
+	--c-namespace Up \
+	--annotate "org.freedesktop.UPower" "org.gtk.GDBus.C.Name" ExportedDaemon \
+	$(srcdir)/org.freedesktop.UPower.xml
 
 up-device-glue.h: org.freedesktop.UPower.Device.xml Makefile.am
 	dbus-binding-tool --prefix=up_device --mode=glib-server --output=up-device-glue.h $(srcdir)/org.freedesktop.UPower.Device.xml

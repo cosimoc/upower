@@ -22,7 +22,6 @@
 #define __UP_DAEMON_H__
 
 #include <glib-object.h>
-#include <dbus/dbus-glib.h>
 
 #include "up-types.h"
 #include "up-device-list.h"
@@ -59,9 +58,6 @@ typedef enum
 
 #define UP_DAEMON_ERROR up_daemon_error_quark ()
 
-GType up_daemon_error_get_type (void);
-#define UP_DAEMON_TYPE_ERROR (up_daemon_error_get_type ())
-
 GQuark		 up_daemon_error_quark		(void);
 GType		 up_daemon_get_type		(void);
 UpDaemon	*up_daemon_new			(void);
@@ -73,6 +69,7 @@ guint		 up_daemon_get_number_devices_of_type (UpDaemon	*daemon,
 UpDeviceList	*up_daemon_get_device_list	(UpDaemon		*daemon);
 gboolean	 up_daemon_startup		(UpDaemon		*daemon);
 void		 up_daemon_shutdown		(UpDaemon		*daemon);
+GDBusConnection *up_daemon_get_dbus_connection  (UpDaemon		*daemon);
 void		 up_daemon_set_lid_is_closed	(UpDaemon		*daemon,
 						 gboolean		 lid_is_closed);
 void		 up_daemon_set_lid_is_present	(UpDaemon		*daemon,
@@ -87,22 +84,10 @@ UpDeviceLevel	 up_daemon_compute_warning_level(UpDaemon		*daemon,
 						 gboolean		 power_supply,
 						 gdouble		 percentage,
 						 gint64			 time_to_empty);
-void		 up_daemon_emit_properties_changed (DBusGConnection	*gconnection,
-						    const gchar		*object_path,
-						    const gchar		*interface,
-						    GHashTable		*props);
 
 void		 up_daemon_start_poll		(GObject		*object,
 						 GSourceFunc		 callback);
 void		 up_daemon_stop_poll		(GObject		*object);
-
-/* exported */
-gboolean	 up_daemon_enumerate_devices	(UpDaemon		*daemon,
-						 DBusGMethodInvocation	*context);
-gboolean	 up_daemon_get_display_device   (UpDaemon		*daemon,
-						 DBusGMethodInvocation	*context);
-gboolean	 up_daemon_get_critical_action	(UpDaemon		*daemon,
-						 DBusGMethodInvocation	*context);
 
 G_END_DECLS
 
