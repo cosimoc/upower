@@ -184,7 +184,7 @@ class Tests(unittest.TestCase):
         proxy = Gio.DBusProxy.new_sync(
             self.dbus, Gio.DBusProxyFlags.DO_NOT_AUTO_START, None, UP,
             UP_DISPLAY_OBJECT_PATH, 'org.freedesktop.DBus.Properties', None)
-        return proxy.Get('(ss)', UP, name)
+        return proxy.Get('(ss)', UP + '.Device', name)
 
     def get_dbus_dev_property(self, device, name):
         '''Get property value from an upower device D-Bus path.'''
