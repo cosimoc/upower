@@ -26,7 +26,7 @@
 #include <glib-object.h>
 
 #include "up-wakeups.h"
-#include "up-wakeups-glue.h"
+#include "up-wakeups-generated.h"
 
 static void	up_wakeups_class_init	(UpWakeupsClass	*klass);
 static void	up_wakeups_init		(UpWakeups	*wakeups);
@@ -36,7 +36,7 @@ static void	up_wakeups_finalize	(GObject	*object);
 
 struct UpWakeupsPrivate
 {
-	UpWakeupsGlue		*proxy;
+	UpExportedWakeups *proxy;
 };
 
 enum {
@@ -70,8 +70,8 @@ up_wakeups_get_total_sync (UpWakeups *wakeups, GCancellable *cancellable, GError
 	g_return_val_if_fail (UP_IS_WAKEUPS (wakeups), FALSE);
 	g_return_val_if_fail (wakeups->priv->proxy != NULL, FALSE);
 
-	ret = up_wakeups_glue_call_get_total_sync (wakeups->priv->proxy, &total,
-						   cancellable, error);
+	ret = up_exported_wakeups_call_get_total_sync (wakeups->priv->proxy, &total,
+						       cancellable, error);
 	if (!ret)
 		total = 0;
 	return total;
@@ -104,10 +104,10 @@ up_wakeups_get_data_sync (UpWakeups *wakeups, GCancellable *cancellable, GError 
 	g_return_val_if_fail (wakeups->priv->proxy != NULL, NULL);
 
 	/* get compound data */
-	ret = up_wakeups_glue_call_get_data_sync (wakeups->priv->proxy,
-						  &gva,
-						  NULL,
-						  &error_local);
+	ret = up_exported_wakeups_call_get_data_sync (wakeups->priv->proxy,
+						      &gva,
+						      NULL,
+						      &error_local);
 
 	if (!ret) {
 		g_warning ("GetData on failed: %s", error_local->message);
@@ -192,14 +192,14 @@ gboolean
 up_wakeups_get_has_capability (UpWakeups *wakeups)
 {
 	g_return_val_if_fail (UP_IS_WAKEUPS (wakeups), FALSE);
-	return up_wakeups_glue_get_has_capability (wakeups->priv->proxy);
+	return up_exported_wakeups_get_has_capability (wakeups->priv->proxy);
 }
 
 /**
  * up_wakeups_total_changed_cb:
  **/
 static void
-up_wakeups_total_changed_cb (UpWakeupsGlue *proxy, guint value, UpWakeups *wakeups)
+up_wakeups_total_changed_cb (UpExportedWakeups *proxy, guint value, UpWakeups *wakeups)
 {
 	g_signal_emit (wakeups, signals [UP_WAKEUPS_TOTAL_CHANGED], 0, value);
 }
@@ -208,7 +208,7 @@ up_wakeups_total_changed_cb (UpWakeupsGlue *proxy, guint value, UpWakeups *wakeu
  * up_wakeups_data_changed_cb:
  **/
 static void
-up_wakeups_data_changed_cb (UpWakeupsGlue *proxy, UpWakeups *wakeups)
+up_wakeups_data_changed_cb (UpExportedWakeups *proxy, UpWakeups *wakeups)
 {
 	g_signal_emit (wakeups, signals [UP_WAKEUPS_DATA_CHANGED], 0);
 }
@@ -249,12 +249,12 @@ up_wakeups_init (UpWakeups *wakeups)
 	wakeups->priv = UP_WAKEUPS_GET_PRIVATE (wakeups);
 
 	/* connect to main interface */
-	wakeups->priv->proxy = up_wakeups_glue_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
-								       G_DBUS_PROXY_FLAGS_NONE,
-								       "org.freedesktop.UPower",
-								       "/org/freedesktop/UPower/Wakeups",
-								       NULL,
-								       &error);
+	wakeups->priv->proxy = up_exported_wakeups_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+									   G_DBUS_PROXY_FLAGS_NONE,
+									   "org.freedesktop.UPower",
+									   "/org/freedesktop/UPower/Wakeups",
+									   NULL,
+									   &error);
 	if (wakeups->priv->proxy == NULL) {
 		g_warning ("Couldn't connect to proxy: %s", error->message);
 		g_error_free (error);

@@ -242,6 +242,7 @@ AC_CONFIG_FILES([
 Makefile
 upower-glib.pc
 etc/Makefile
+dbus/Makefile
 src/Makefile
 src/dummy/Makefile
 src/freebsd/Makefile

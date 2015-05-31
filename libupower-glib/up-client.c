@@ -36,7 +36,7 @@
 #include <glib-object.h>
 
 #include "up-client.h"
-#include "up-client-glue.h"
+#include "up-daemon-generated.h"
 #include "up-device.h"
 
 static void	up_client_class_init	(UpClientClass	*klass);
@@ -52,7 +52,7 @@ static void	up_client_finalize	(GObject	*object);
  **/
 struct _UpClientPrivate
 {
-	UpClientGlue		*proxy;
+	UpExportedDaemon *proxy;
 };
 
 enum {
@@ -97,10 +97,10 @@ up_client_get_devices (UpClient *client)
 
 	array = g_ptr_array_new ();
 
-	if (up_client_glue_call_enumerate_devices_sync (client->priv->proxy,
-							&devices,
-							NULL,
-							&error) == FALSE) {
+	if (up_exported_daemon_call_enumerate_devices_sync (client->priv->proxy,
+							    &devices,
+							    NULL,
+							    &error) == FALSE) {
 		g_warning ("up_client_get_devices failed: %s", error->message);
 		g_error_free (error);
 		return NULL;
@@ -166,9 +166,9 @@ up_client_get_critical_action (UpClient *client)
 	char *action;
 
 	g_return_val_if_fail (UP_IS_CLIENT (client), NULL);
-	if (!up_client_glue_call_get_critical_action_sync (client->priv->proxy,
-							   &action,
-							   NULL, NULL)) {
+	if (!up_exported_daemon_call_get_critical_action_sync (client->priv->proxy,
+							       &action,
+							       NULL, NULL)) {
 		return NULL;
 	}
 	return action;
@@ -188,7 +188,7 @@ const gchar *
 up_client_get_daemon_version (UpClient *client)
 {
 	g_return_val_if_fail (UP_IS_CLIENT (client), NULL);
-	return up_client_glue_get_daemon_version (client->priv->proxy);
+	return up_exported_daemon_get_daemon_version (client->priv->proxy);
 }
 
 /**
@@ -205,7 +205,7 @@ gboolean
 up_client_get_lid_is_closed (UpClient *client)
 {
 	g_return_val_if_fail (UP_IS_CLIENT (client), FALSE);
-	return up_client_glue_get_lid_is_closed (client->priv->proxy);
+	return up_exported_daemon_get_lid_is_closed (client->priv->proxy);
 }
 
 /**
@@ -222,7 +222,7 @@ gboolean
 up_client_get_lid_is_present (UpClient *client)
 {
 	g_return_val_if_fail (UP_IS_CLIENT (client), FALSE);
-	return up_client_glue_get_lid_is_present (client->priv->proxy);
+	return up_exported_daemon_get_lid_is_present (client->priv->proxy);
 }
 
 /**
@@ -239,7 +239,7 @@ gboolean
 up_client_get_on_battery (UpClient *client)
 {
 	g_return_val_if_fail (UP_IS_CLIENT (client), FALSE);
-	return up_client_glue_get_on_battery (client->priv->proxy);
+	return up_exported_daemon_get_on_battery (client->priv->proxy);
 }
 
 /*
@@ -281,7 +281,7 @@ up_client_notify_cb (GObject    *gobject,
  * up_client_added_cb:
  */
 static void
-up_device_added_cb (UpClientGlue *proxy, const gchar *object_path, UpClient *client)
+up_device_added_cb (UpExportedDaemon *proxy, const gchar *object_path, UpClient *client)
 {
 	up_client_add (client, object_path);
 }
@@ -290,7 +290,7 @@ up_device_added_cb (UpClientGlue *proxy, const gchar *object_path, UpClient *cli
  * up_client_removed_cb:
  */
 static void
-up_device_removed_cb (UpClientGlue *proxy, const gchar *object_path, UpClient *client)
+up_device_removed_cb (UpExportedDaemon *proxy, const gchar *object_path, UpClient *client)
 {
 	g_signal_emit (client, signals [UP_CLIENT_DEVICE_REMOVED], 0, object_path);
 }
@@ -309,16 +309,16 @@ up_client_get_property (GObject *object,
 
 	switch (prop_id) {
 	case PROP_DAEMON_VERSION:
-		g_value_set_string (value, up_client_glue_get_daemon_version (client->priv->proxy));
+		g_value_set_string (value, up_exported_daemon_get_daemon_version (client->priv->proxy));
 		break;
 	case PROP_ON_BATTERY:
-		g_value_set_boolean (value, up_client_glue_get_on_battery (client->priv->proxy));
+		g_value_set_boolean (value, up_exported_daemon_get_on_battery (client->priv->proxy));
 		break;
 	case PROP_LID_IS_CLOSED:
-		g_value_set_boolean (value, up_client_glue_get_lid_is_closed (client->priv->proxy));
+		g_value_set_boolean (value, up_exported_daemon_get_lid_is_closed (client->priv->proxy));
 		break;
 	case PROP_LID_IS_PRESENT:
-		g_value_set_boolean (value, up_client_glue_get_lid_is_present (client->priv->proxy));
+		g_value_set_boolean (value, up_exported_daemon_get_lid_is_present (client->priv->proxy));
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -442,12 +442,12 @@ up_client_init (UpClient *client)
 	client->priv = UP_CLIENT_GET_PRIVATE (client);
 
 	/* connect to main interface */
-	client->priv->proxy = up_client_glue_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
-								     G_DBUS_PROXY_FLAGS_NONE,
-								     "org.freedesktop.UPower",
-								     "/org/freedesktop/UPower",
-								     NULL,
-								     &error);
+	client->priv->proxy = up_exported_daemon_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+									 G_DBUS_PROXY_FLAGS_NONE,
+									 "org.freedesktop.UPower",
+									 "/org/freedesktop/UPower",
+									 NULL,
+									 &error);
 	if (client->priv->proxy == NULL) {
 		g_warning ("Couldn't connect to proxy: %s", error->message);
 		g_error_free (error);

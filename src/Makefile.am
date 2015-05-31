@@ -16,6 +16,7 @@ AM_CPPFLAGS = \
 	-D_POSIX_PTHREAD_SEMANTICS -D_REENTRANT			\
 	-DUP_COMPILATION					\
 	-DG_LOG_DOMAIN=\"UPower\"				\
+	-I$(top_srcdir)/dbus					\
 	-I$(top_srcdir)/libupower-glib				\
 	-I$(top_srcdir)						\
 	$(GIO_CFLAGS)						\
@@ -23,17 +24,11 @@ AM_CPPFLAGS = \
 	$(GUDEV_CFLAGS)						\
 	$(GLIB_CFLAGS)
 
-UPOWER_LIBS = $(top_builddir)/libupower-glib/libupower-glib.la
+UPOWER_LIBS = \
+	$(top_builddir)/dbus/libupower-dbus.la			\
+	$(top_builddir)/libupower-glib/libupower-glib.la
 
 BUILT_SOURCES =							\
-	up-daemon-generated.h					\
-	up-daemon-generated.c					\
-	up-device-generated.h					\
-	up-device-generated.c					\
-	up-kbd-backlight-generated.h				\
-	up-kbd-backlight-generated.c				\
-	up-wakeups-generated.h					\
-	up-wakeups-generated.c					\
 	up-marshal.h						\
 	up-marshal.c
 
@@ -43,42 +38,7 @@ up-marshal.h: up-marshal.list
 up-marshal.c: up-marshal.list
 	echo "#include \"up-marshal.h\"" > $@ && glib-genmarshal $< --prefix=up_marshal --body >> $@
 
-up-daemon-generated.h: org.freedesktop.UPower.xml Makefile.am
-	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower. \
-	--generate-c-code up-daemon-generated \
-	--c-namespace Up \
-	--annotate "org.freedesktop.UPower" "org.gtk.GDBus.C.Name" ExportedDaemon \
-	$(srcdir)/org.freedesktop.UPower.xml
-
-up-device-generated.h: org.freedesktop.UPower.Device.xml Makefile.am
-	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower.Device. \
-	--generate-c-code up-device-generated \
-	--c-namespace Up \
-	--annotate "org.freedesktop.UPower.Device" "org.gtk.GDBus.C.Name" ExportedDevice \
-	$(srcdir)/org.freedesktop.UPower.Device.xml
-
-up-kbd-backlight-generated.h: org.freedesktop.UPower.KbdBacklight.xml Makefile.am
-	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower.KbdBacklight. \
-	--generate-c-code up-kbd-backlight-generated \
-	--c-namespace Up \
-	--annotate "org.freedesktop.UPower.KbdBacklight" "org.gtk.GDBus.C.Name" ExportedKbdBacklight \
-	$(srcdir)/org.freedesktop.UPower.KbdBacklight.xml
-
-up-wakeups-generated.h: org.freedesktop.UPower.Wakeups.xml Makefile.am
-	$(AM_V_GEN) gdbus-codegen --interface-prefix org.freedesktop.UPower.Wakeups. \
-	--generate-c-code up-wakeups-generated \
-	--c-namespace Up \
-	--annotate "org.freedesktop.UPower.Wakeups" "org.gtk.GDBus.C.Name" ExportedWakeups \
-	$(srcdir)/org.freedesktop.UPower.Wakeups.xml
-
 libexec_PROGRAMS = upowerd
-
-dbusifdir = $(datadir)/dbus-1/interfaces
-dbusif_DATA =							\
-	org.freedesktop.UPower.xml				\
-	org.freedesktop.UPower.Device.xml			\
-	org.freedesktop.UPower.KbdBacklight.xml			\
-	org.freedesktop.UPower.Wakeups.xml
 
 upowerd_SOURCES =						\
 	up-daemon.h						\
@@ -225,10 +185,6 @@ MAINTAINERCLEANFILES =						\
 	$(dbusservice_DATA)
 
 EXTRA_DIST =							\
-	org.freedesktop.UPower.xml				\
-	org.freedesktop.UPower.Device.xml			\
-	org.freedesktop.UPower.KbdBacklight.xml			\
-	org.freedesktop.UPower.Wakeups.xml			\
 	up-marshal.list						\
 	$(systemdservice_in_files)				\
 	$(dbusservice_in_files)					\

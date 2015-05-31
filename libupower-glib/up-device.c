@@ -37,7 +37,7 @@
 #include <string.h>
 
 #include "up-device.h"
-#include "up-device-glue.h"
+#include "up-device-generated.h"
 #include "up-stats-item.h"
 #include "up-history-item.h"
 
@@ -54,7 +54,7 @@ static void	up_device_finalize	(GObject		*object);
  **/
 struct _UpDevicePrivate
 {
-	UpDeviceGlue		*proxy_device;
+	UpExportedDevice		*proxy_device;
 
 	/* For use when a UpDevice isn't backed by a D-Bus object
 	 * by the UPower daemon */
@@ -100,7 +100,7 @@ G_DEFINE_TYPE (UpDevice, up_device, G_TYPE_OBJECT)
  * up_device_changed_cb:
  */
 static void
-up_device_changed_cb (UpDeviceGlue *proxy, GParamSpec *pspec, UpDevice *device)
+up_device_changed_cb (UpExportedDevice *proxy, GParamSpec *pspec, UpDevice *device)
 {
 	if (g_strcmp0 (pspec->name, "type") == 0)
 		g_object_notify (G_OBJECT (device), "kind");
@@ -124,7 +124,7 @@ up_device_changed_cb (UpDeviceGlue *proxy, GParamSpec *pspec, UpDevice *device)
 gboolean
 up_device_set_object_path_sync (UpDevice *device, const gchar *object_path, GCancellable *cancellable, GError **error)
 {
-	UpDeviceGlue *proxy_device;
+	UpExportedDevice *proxy_device;
 	gboolean ret = TRUE;
 
 	g_return_val_if_fail (UP_IS_DEVICE (device), FALSE);
@@ -144,12 +144,12 @@ up_device_set_object_path_sync (UpDevice *device, const gchar *object_path, GCan
 	g_clear_pointer (&device->priv->offline_props, g_hash_table_unref);
 
 	/* connect to the correct path for all the other methods */
-	proxy_device = up_device_glue_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
-							      G_DBUS_PROXY_FLAGS_NONE,
-							      "org.freedesktop.UPower",
-							      object_path,
-							      cancellable,
-							      error);
+	proxy_device = up_exported_device_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+								  G_DBUS_PROXY_FLAGS_NONE,
+								  "org.freedesktop.UPower",
+								  object_path,
+								  cancellable,
+								  error);
 	if (proxy_device == NULL)
 		return FALSE;
 
@@ -271,77 +271,77 @@ up_device_to_text (UpDevice *device)
 	is_display = (g_strcmp0 ("/org/freedesktop/UPower/devices/DisplayDevice", up_device_get_object_path (device)) == 0);
 
 	/* get a human readable time */
-	t = (time_t) up_device_glue_get_update_time (priv->proxy_device);
+	t = (time_t) up_exported_device_get_update_time (priv->proxy_device);
 	time_tm = localtime (&t);
 	strftime (time_buf, sizeof time_buf, "%c", time_tm);
 
 	string = g_string_new ("");
 	if (!is_display)
-		g_string_append_printf (string, "  native-path:          %s\n", up_device_glue_get_native_path (priv->proxy_device));
-	vendor = up_device_glue_get_vendor (priv->proxy_device);
+		g_string_append_printf (string, "  native-path:          %s\n", up_exported_device_get_native_path (priv->proxy_device));
+	vendor = up_exported_device_get_vendor (priv->proxy_device);
 	if (vendor != NULL && vendor[0] != '\0')
 		g_string_append_printf (string, "  vendor:               %s\n", vendor);
-	model = up_device_glue_get_model (priv->proxy_device);
+	model = up_exported_device_get_model (priv->proxy_device);
 	if (model != NULL && model[0] != '\0')
 		g_string_append_printf (string, "  model:                %s\n", model);
-	serial = up_device_glue_get_serial (priv->proxy_device);
+	serial = up_exported_device_get_serial (priv->proxy_device);
 	if (serial != NULL && serial[0] != '\0')
 		g_string_append_printf (string, "  serial:               %s\n", serial);
-	g_string_append_printf (string, "  power supply:         %s\n", up_device_bool_to_string (up_device_glue_get_power_supply (priv->proxy_device)));
-	g_string_append_printf (string, "  updated:              %s (%d seconds ago)\n", time_buf, (int) (time (NULL) - up_device_glue_get_update_time (priv->proxy_device)));
-	g_string_append_printf (string, "  has history:          %s\n", up_device_bool_to_string (up_device_glue_get_has_history (priv->proxy_device)));
-	g_string_append_printf (string, "  has statistics:       %s\n", up_device_bool_to_string (up_device_glue_get_has_statistics (priv->proxy_device)));
+	g_string_append_printf (string, "  power supply:         %s\n", up_device_bool_to_string (up_exported_device_get_power_supply (priv->proxy_device)));
+	g_string_append_printf (string, "  updated:              %s (%d seconds ago)\n", time_buf, (int) (time (NULL) - up_exported_device_get_update_time (priv->proxy_device)));
+	g_string_append_printf (string, "  has history:          %s\n", up_device_bool_to_string (up_exported_device_get_has_history (priv->proxy_device)));
+	g_string_append_printf (string, "  has statistics:       %s\n", up_device_bool_to_string (up_exported_device_get_has_statistics (priv->proxy_device)));
 
-	kind = up_device_glue_get_type_ (priv->proxy_device);
+	kind = up_exported_device_get_type_ (priv->proxy_device);
 	g_string_append_printf (string, "  %s\n", up_device_kind_to_string (kind));
 
 	if (kind == UP_DEVICE_KIND_BATTERY ||
 	    kind == UP_DEVICE_KIND_MOUSE ||
 	    kind == UP_DEVICE_KIND_KEYBOARD ||
 	    kind == UP_DEVICE_KIND_UPS)
-		g_string_append_printf (string, "    present:             %s\n", up_device_bool_to_string (up_device_glue_get_is_present (priv->proxy_device)));
+		g_string_append_printf (string, "    present:             %s\n", up_device_bool_to_string (up_exported_device_get_is_present (priv->proxy_device)));
 	if ((kind == UP_DEVICE_KIND_PHONE ||
 	     kind == UP_DEVICE_KIND_BATTERY ||
 	     kind == UP_DEVICE_KIND_MOUSE ||
 	     kind == UP_DEVICE_KIND_KEYBOARD) &&
 	    !is_display)
-		g_string_append_printf (string, "    rechargeable:        %s\n", up_device_bool_to_string (up_device_glue_get_is_rechargeable (priv->proxy_device)));
+		g_string_append_printf (string, "    rechargeable:        %s\n", up_device_bool_to_string (up_exported_device_get_is_rechargeable (priv->proxy_device)));
 	if (kind == UP_DEVICE_KIND_BATTERY ||
 	    kind == UP_DEVICE_KIND_MOUSE ||
 	    kind == UP_DEVICE_KIND_KEYBOARD ||
 	    kind == UP_DEVICE_KIND_UPS)
-		g_string_append_printf (string, "    state:               %s\n", up_device_state_to_string (up_device_glue_get_state (priv->proxy_device)));
-	g_string_append_printf (string, "    warning-level:       %s\n", up_device_level_to_string (up_device_glue_get_warning_level (priv->proxy_device)));
+		g_string_append_printf (string, "    state:               %s\n", up_device_state_to_string (up_exported_device_get_state (priv->proxy_device)));
+	g_string_append_printf (string, "    warning-level:       %s\n", up_device_level_to_string (up_exported_device_get_warning_level (priv->proxy_device)));
 	if (kind == UP_DEVICE_KIND_BATTERY) {
-		g_string_append_printf (string, "    energy:              %g Wh\n", up_device_glue_get_energy (priv->proxy_device));
+		g_string_append_printf (string, "    energy:              %g Wh\n", up_exported_device_get_energy (priv->proxy_device));
 		if (!is_display)
-			g_string_append_printf (string, "    energy-empty:        %g Wh\n", up_device_glue_get_energy_empty (priv->proxy_device));
-		g_string_append_printf (string, "    energy-full:         %g Wh\n", up_device_glue_get_energy_full (priv->proxy_device));
+			g_string_append_printf (string, "    energy-empty:        %g Wh\n", up_exported_device_get_energy_empty (priv->proxy_device));
+		g_string_append_printf (string, "    energy-full:         %g Wh\n", up_exported_device_get_energy_full (priv->proxy_device));
 		if (!is_display)
-			g_string_append_printf (string, "    energy-full-design:  %g Wh\n", up_device_glue_get_energy_full_design (priv->proxy_device));
+			g_string_append_printf (string, "    energy-full-design:  %g Wh\n", up_exported_device_get_energy_full_design (priv->proxy_device));
 	}
 	if (kind == UP_DEVICE_KIND_BATTERY ||
 	    kind == UP_DEVICE_KIND_MONITOR)
-		g_string_append_printf (string, "    energy-rate:         %g W\n", up_device_glue_get_energy_rate (priv->proxy_device));
+		g_string_append_printf (string, "    energy-rate:         %g W\n", up_exported_device_get_energy_rate (priv->proxy_device));
 	if (kind == UP_DEVICE_KIND_UPS ||
 	    kind == UP_DEVICE_KIND_BATTERY ||
 	    kind == UP_DEVICE_KIND_MONITOR) {
-		if (up_device_glue_get_voltage (priv->proxy_device) > 0)
-			g_string_append_printf (string, "    voltage:             %g V\n", up_device_glue_get_voltage (priv->proxy_device));
+		if (up_exported_device_get_voltage (priv->proxy_device) > 0)
+			g_string_append_printf (string, "    voltage:             %g V\n", up_exported_device_get_voltage (priv->proxy_device));
 	}
 	if (kind == UP_DEVICE_KIND_KEYBOARD) {
-		if (up_device_glue_get_luminosity (priv->proxy_device) > 0)
-			g_string_append_printf (string, "    luminosity:          %g lx\n", up_device_glue_get_luminosity (priv->proxy_device));
+		if (up_exported_device_get_luminosity (priv->proxy_device) > 0)
+			g_string_append_printf (string, "    luminosity:          %g lx\n", up_exported_device_get_luminosity (priv->proxy_device));
 	}
 	if (kind == UP_DEVICE_KIND_BATTERY ||
 	    kind == UP_DEVICE_KIND_UPS) {
-		if (up_device_glue_get_time_to_full (priv->proxy_device) > 0) {
-			time_str = up_device_to_text_time_to_string (up_device_glue_get_time_to_full (priv->proxy_device));
+		if (up_exported_device_get_time_to_full (priv->proxy_device) > 0) {
+			time_str = up_device_to_text_time_to_string (up_exported_device_get_time_to_full (priv->proxy_device));
 			g_string_append_printf (string, "    time to full:        %s\n", time_str);
 			g_free (time_str);
 		}
-		if (up_device_glue_get_time_to_empty (priv->proxy_device) > 0) {
-			time_str = up_device_to_text_time_to_string (up_device_glue_get_time_to_empty (priv->proxy_device));
+		if (up_exported_device_get_time_to_empty (priv->proxy_device) > 0) {
+			time_str = up_device_to_text_time_to_string (up_exported_device_get_time_to_empty (priv->proxy_device));
 			g_string_append_printf (string, "    time to empty:       %s\n", time_str);
 			g_free (time_str);
 		}
@@ -354,24 +354,24 @@ up_device_to_text (UpDevice *device)
 	    kind == UP_DEVICE_KIND_COMPUTER ||
 	    kind == UP_DEVICE_KIND_MEDIA_PLAYER ||
 	    kind == UP_DEVICE_KIND_UPS)
-		g_string_append_printf (string, "    percentage:          %g%%\n", up_device_glue_get_percentage (priv->proxy_device));
+		g_string_append_printf (string, "    percentage:          %g%%\n", up_exported_device_get_percentage (priv->proxy_device));
 	if (kind == UP_DEVICE_KIND_BATTERY) {
-		if (up_device_glue_get_temperature (priv->proxy_device) > 0)
-			g_string_append_printf (string, "    temperature:         %g degrees C\n", up_device_glue_get_temperature (priv->proxy_device));
-		if (up_device_glue_get_capacity (priv->proxy_device) > 0)
-			g_string_append_printf (string, "    capacity:            %g%%\n", up_device_glue_get_capacity (priv->proxy_device));
+		if (up_exported_device_get_temperature (priv->proxy_device) > 0)
+			g_string_append_printf (string, "    temperature:         %g degrees C\n", up_exported_device_get_temperature (priv->proxy_device));
+		if (up_exported_device_get_capacity (priv->proxy_device) > 0)
+			g_string_append_printf (string, "    capacity:            %g%%\n", up_exported_device_get_capacity (priv->proxy_device));
 	}
 	if (kind == UP_DEVICE_KIND_BATTERY) {
-		if (up_device_glue_get_technology (priv->proxy_device) != UP_DEVICE_TECHNOLOGY_UNKNOWN)
-			g_string_append_printf (string, "    technology:          %s\n", up_device_technology_to_string (up_device_glue_get_technology (priv->proxy_device)));
+		if (up_exported_device_get_technology (priv->proxy_device) != UP_DEVICE_TECHNOLOGY_UNKNOWN)
+			g_string_append_printf (string, "    technology:          %s\n", up_device_technology_to_string (up_exported_device_get_technology (priv->proxy_device)));
 	}
 	if (kind == UP_DEVICE_KIND_LINE_POWER)
-		g_string_append_printf (string, "    online:              %s\n", up_device_bool_to_string (up_device_glue_get_online (priv->proxy_device)));
+		g_string_append_printf (string, "    online:              %s\n", up_device_bool_to_string (up_exported_device_get_online (priv->proxy_device)));
 
-	g_string_append_printf (string, "    icon-name:          '%s'\n", up_device_glue_get_icon_name (priv->proxy_device));
+	g_string_append_printf (string, "    icon-name:          '%s'\n", up_exported_device_get_icon_name (priv->proxy_device));
 
 	/* if we can, get history */
-	if (up_device_glue_get_has_history (priv->proxy_device)) {
+	if (up_exported_device_get_has_history (priv->proxy_device)) {
 		up_device_to_text_history (device, string, "charge");
 		up_device_to_text_history (device, string, "rate");
 	}
@@ -398,7 +398,7 @@ up_device_refresh_sync (UpDevice *device, GCancellable *cancellable, GError **er
 	g_return_val_if_fail (UP_IS_DEVICE (device), FALSE);
 	g_return_val_if_fail (device->priv->proxy_device != NULL, FALSE);
 
-	return up_device_glue_call_refresh_sync (device->priv->proxy_device, cancellable, error);
+	return up_exported_device_call_refresh_sync (device->priv->proxy_device, cancellable, error);
 }
 
 /**
@@ -433,13 +433,13 @@ up_device_get_history_sync (UpDevice *device, const gchar *type, guint timespec,
 	g_return_val_if_fail (device->priv->proxy_device != NULL, NULL);
 
 	/* get compound data */
-	ret = up_device_glue_call_get_history_sync (device->priv->proxy_device,
-						    type,
-						    timespec,
-						    resolution,
-						    &gva,
-						    NULL,
-						    &error_local);
+	ret = up_exported_device_call_get_history_sync (device->priv->proxy_device,
+							type,
+							timespec,
+							resolution,
+							&gva,
+							NULL,
+							&error_local);
 	if (!ret) {
 		g_set_error (error, 1, 0, "GetHistory(%s,%i) on %s failed: %s", type, timespec,
 			     up_device_get_object_path (device), error_local->message);
@@ -513,11 +513,11 @@ up_device_get_statistics_sync (UpDevice *device, const gchar *type, GCancellable
 	g_return_val_if_fail (device->priv->proxy_device != NULL, NULL);
 
 	/* get compound data */
-	ret = up_device_glue_call_get_statistics_sync (device->priv->proxy_device,
-						       type,
-						       &gva,
-						       NULL,
-						       &error_local);
+	ret = up_exported_device_call_get_statistics_sync (device->priv->proxy_device,
+							   type,
+							   &gva,
+							   NULL,
+							   &error_local);
 	if (!ret) {
 		g_set_error (error, 1, 0, "GetStatistics(%s) on %s failed: %s", type,
 				      up_device_get_object_path (device), error_local->message);
@@ -582,88 +582,88 @@ up_device_set_property (GObject *object, guint prop_id, const GValue *value, GPa
 
 	switch (prop_id) {
 	case PROP_NATIVE_PATH:
-		up_device_glue_set_native_path (device->priv->proxy_device, g_value_get_string (value));
+		up_exported_device_set_native_path (device->priv->proxy_device, g_value_get_string (value));
 		break;
 	case PROP_VENDOR:
-		up_device_glue_set_vendor (device->priv->proxy_device, g_value_get_string (value));
+		up_exported_device_set_vendor (device->priv->proxy_device, g_value_get_string (value));
 		break;
 	case PROP_MODEL:
-		up_device_glue_set_model (device->priv->proxy_device, g_value_get_string (value));
+		up_exported_device_set_model (device->priv->proxy_device, g_value_get_string (value));
 		break;
 	case PROP_SERIAL:
-		up_device_glue_set_serial (device->priv->proxy_device, g_value_get_string (value));
+		up_exported_device_set_serial (device->priv->proxy_device, g_value_get_string (value));
 		break;
 	case PROP_UPDATE_TIME:
-		up_device_glue_set_update_time (device->priv->proxy_device, g_value_get_uint64 (value));
+		up_exported_device_set_update_time (device->priv->proxy_device, g_value_get_uint64 (value));
 		break;
 	case PROP_KIND:
-		up_device_glue_set_type_ (device->priv->proxy_device, g_value_get_uint (value));
+		up_exported_device_set_type_ (device->priv->proxy_device, g_value_get_uint (value));
 		break;
 	case PROP_POWER_SUPPLY:
-		up_device_glue_set_power_supply (device->priv->proxy_device, g_value_get_boolean (value));
+		up_exported_device_set_power_supply (device->priv->proxy_device, g_value_get_boolean (value));
 		break;
 	case PROP_ONLINE:
-		up_device_glue_set_online (device->priv->proxy_device, g_value_get_boolean (value));
+		up_exported_device_set_online (device->priv->proxy_device, g_value_get_boolean (value));
 		break;
 	case PROP_IS_PRESENT:
-		up_device_glue_set_is_present (device->priv->proxy_device, g_value_get_boolean (value));
+		up_exported_device_set_is_present (device->priv->proxy_device, g_value_get_boolean (value));
 		break;
 	case PROP_IS_RECHARGEABLE:
-		up_device_glue_set_is_rechargeable (device->priv->proxy_device, g_value_get_boolean (value));
+		up_exported_device_set_is_rechargeable (device->priv->proxy_device, g_value_get_boolean (value));
 		break;
 	case PROP_HAS_HISTORY:
-		up_device_glue_set_has_history (device->priv->proxy_device, g_value_get_boolean (value));
+		up_exported_device_set_has_history (device->priv->proxy_device, g_value_get_boolean (value));
 		break;
 	case PROP_HAS_STATISTICS:
-		up_device_glue_set_has_statistics (device->priv->proxy_device, g_value_get_boolean (value));
+		up_exported_device_set_has_statistics (device->priv->proxy_device, g_value_get_boolean (value));
 		break;
 	case PROP_STATE:
-		up_device_glue_set_state (device->priv->proxy_device, g_value_get_uint (value));
+		up_exported_device_set_state (device->priv->proxy_device, g_value_get_uint (value));
 		break;
 	case PROP_CAPACITY:
-		up_device_glue_set_capacity (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_capacity (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_ENERGY:
-		up_device_glue_set_energy (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_energy (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_ENERGY_EMPTY:
-		up_device_glue_set_energy_empty (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_energy_empty (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_ENERGY_FULL:
-		up_device_glue_set_energy_full (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_energy_full (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_ENERGY_FULL_DESIGN:
-		up_device_glue_set_energy_full_design (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_energy_full_design (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_ENERGY_RATE:
-		up_device_glue_set_energy_rate (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_energy_rate (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_VOLTAGE:
-		up_device_glue_set_voltage (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_voltage (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_LUMINOSITY:
-		up_device_glue_set_luminosity (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_luminosity (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_TIME_TO_EMPTY:
-		up_device_glue_set_time_to_empty (device->priv->proxy_device, g_value_get_int64 (value));
+		up_exported_device_set_time_to_empty (device->priv->proxy_device, g_value_get_int64 (value));
 		break;
 	case PROP_TIME_TO_FULL:
-		up_device_glue_set_time_to_full (device->priv->proxy_device, g_value_get_int64 (value));
+		up_exported_device_set_time_to_full (device->priv->proxy_device, g_value_get_int64 (value));
 		break;
 	case PROP_PERCENTAGE:
-		up_device_glue_set_percentage (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_percentage (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_TEMPERATURE:
-		up_device_glue_set_temperature (device->priv->proxy_device, g_value_get_double (value));
+		up_exported_device_set_temperature (device->priv->proxy_device, g_value_get_double (value));
 		break;
 	case PROP_TECHNOLOGY:
-		up_device_glue_set_technology (device->priv->proxy_device, g_value_get_uint (value));
+		up_exported_device_set_technology (device->priv->proxy_device, g_value_get_uint (value));
 		break;
 	case PROP_WARNING_LEVEL:
-		up_device_glue_set_warning_level (device->priv->proxy_device, g_value_get_uint (value));
+		up_exported_device_set_warning_level (device->priv->proxy_device, g_value_get_uint (value));
 		break;
 	case PROP_ICON_NAME:
-		up_device_glue_set_icon_name (device->priv->proxy_device, g_value_get_string (value));
+		up_exported_device_set_icon_name (device->priv->proxy_device, g_value_get_string (value));
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -693,88 +693,88 @@ up_device_get_property (GObject *object, guint prop_id, GValue *value, GParamSpe
 
 	switch (prop_id) {
 	case PROP_UPDATE_TIME:
-		g_value_set_uint64 (value, up_device_glue_get_update_time (device->priv->proxy_device));
+		g_value_set_uint64 (value, up_exported_device_get_update_time (device->priv->proxy_device));
 		break;
 	case PROP_VENDOR:
-		g_value_set_string (value, up_device_glue_get_vendor (device->priv->proxy_device));
+		g_value_set_string (value, up_exported_device_get_vendor (device->priv->proxy_device));
 		break;
 	case PROP_MODEL:
-		g_value_set_string (value, up_device_glue_get_model (device->priv->proxy_device));
+		g_value_set_string (value, up_exported_device_get_model (device->priv->proxy_device));
 		break;
 	case PROP_SERIAL:
-		g_value_set_string (value, up_device_glue_get_serial (device->priv->proxy_device));
+		g_value_set_string (value, up_exported_device_get_serial (device->priv->proxy_device));
 		break;
 	case PROP_NATIVE_PATH:
-		g_value_set_string (value, up_device_glue_get_native_path (device->priv->proxy_device));
+		g_value_set_string (value, up_exported_device_get_native_path (device->priv->proxy_device));
 		break;
 	case PROP_POWER_SUPPLY:
-		g_value_set_boolean (value, up_device_glue_get_power_supply (device->priv->proxy_device));
+		g_value_set_boolean (value, up_exported_device_get_power_supply (device->priv->proxy_device));
 		break;
 	case PROP_ONLINE:
-		g_value_set_boolean (value, up_device_glue_get_online (device->priv->proxy_device));
+		g_value_set_boolean (value, up_exported_device_get_online (device->priv->proxy_device));
 		break;
 	case PROP_IS_PRESENT:
-		g_value_set_boolean (value, up_device_glue_get_is_present (device->priv->proxy_device));
+		g_value_set_boolean (value, up_exported_device_get_is_present (device->priv->proxy_device));
 		break;
 	case PROP_IS_RECHARGEABLE:
-		g_value_set_boolean (value, up_device_glue_get_is_rechargeable (device->priv->proxy_device));
+		g_value_set_boolean (value, up_exported_device_get_is_rechargeable (device->priv->proxy_device));
 		break;
 	case PROP_HAS_HISTORY:
-		g_value_set_boolean (value, up_device_glue_get_has_history (device->priv->proxy_device));
+		g_value_set_boolean (value, up_exported_device_get_has_history (device->priv->proxy_device));
 		break;
 	case PROP_HAS_STATISTICS:
-		g_value_set_boolean (value, up_device_glue_get_has_statistics (device->priv->proxy_device));
+		g_value_set_boolean (value, up_exported_device_get_has_statistics (device->priv->proxy_device));
 		break;
 	case PROP_KIND:
-		g_value_set_uint (value, up_device_glue_get_type_ (device->priv->proxy_device));
+		g_value_set_uint (value, up_exported_device_get_type_ (device->priv->proxy_device));
 		break;
 	case PROP_STATE:
-		g_value_set_uint (value, up_device_glue_get_state (device->priv->proxy_device));
+		g_value_set_uint (value, up_exported_device_get_state (device->priv->proxy_device));
 		break;
 	case PROP_TECHNOLOGY:
-		g_value_set_uint (value, up_device_glue_get_technology (device->priv->proxy_device));
+		g_value_set_uint (value, up_exported_device_get_technology (device->priv->proxy_device));
 		break;
 	case PROP_CAPACITY:
-		g_value_set_double (value, up_device_glue_get_capacity (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_capacity (device->priv->proxy_device));
 		break;
 	case PROP_ENERGY:
-		g_value_set_double (value, up_device_glue_get_energy (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_energy (device->priv->proxy_device));
 		break;
 	case PROP_ENERGY_EMPTY:
-		g_value_set_double (value, up_device_glue_get_energy_empty (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_energy_empty (device->priv->proxy_device));
 		break;
 	case PROP_ENERGY_FULL:
-		g_value_set_double (value, up_device_glue_get_energy_full (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_energy_full (device->priv->proxy_device));
 		break;
 	case PROP_ENERGY_FULL_DESIGN:
-		g_value_set_double (value, up_device_glue_get_energy_full_design (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_energy_full_design (device->priv->proxy_device));
 		break;
 	case PROP_ENERGY_RATE:
-		g_value_set_double (value, up_device_glue_get_energy_rate (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_energy_rate (device->priv->proxy_device));
 		break;
 	case PROP_VOLTAGE:
-		g_value_set_double (value, up_device_glue_get_voltage (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_voltage (device->priv->proxy_device));
 		break;
 	case PROP_LUMINOSITY:
-		g_value_set_double (value, up_device_glue_get_luminosity (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_luminosity (device->priv->proxy_device));
 		break;
 	case PROP_TIME_TO_EMPTY:
-		g_value_set_int64 (value, up_device_glue_get_time_to_empty (device->priv->proxy_device));
+		g_value_set_int64 (value, up_exported_device_get_time_to_empty (device->priv->proxy_device));
 		break;
 	case PROP_TIME_TO_FULL:
-		g_value_set_int64 (value, up_device_glue_get_time_to_full (device->priv->proxy_device));
+		g_value_set_int64 (value, up_exported_device_get_time_to_full (device->priv->proxy_device));
 		break;
 	case PROP_PERCENTAGE:
-		g_value_set_double (value, up_device_glue_get_percentage (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_percentage (device->priv->proxy_device));
 		break;
 	case PROP_TEMPERATURE:
-		g_value_set_double (value, up_device_glue_get_temperature (device->priv->proxy_device));
+		g_value_set_double (value, up_exported_device_get_temperature (device->priv->proxy_device));
 		break;
 	case PROP_WARNING_LEVEL:
-		g_value_set_uint (value, up_device_glue_get_warning_level (device->priv->proxy_device));
+		g_value_set_uint (value, up_exported_device_get_warning_level (device->priv->proxy_device));
 		break;
 	case PROP_ICON_NAME:
-		g_value_set_string (value, up_device_glue_get_icon_name (device->priv->proxy_device));
+		g_value_set_string (value, up_exported_device_get_icon_name (device->priv->proxy_device));
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
