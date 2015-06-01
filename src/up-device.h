@@ -22,8 +22,7 @@
 #ifndef __UP_DEVICE_H__
 #define __UP_DEVICE_H__
 
-#include <glib-object.h>
-
+#include <dbus/up-device-generated.h>
 #include "up-daemon.h"
 
 G_BEGIN_DECLS
@@ -39,13 +38,13 @@ typedef struct UpDevicePrivate UpDevicePrivate;
 
 typedef struct
 {
-	GObject			 parent;
+	UpExportedDeviceSkeleton parent;
 	UpDevicePrivate	*priv;
 } UpDevice;
 
 typedef struct
 {
-	GObjectClass	 parent_class;
+	UpExportedDeviceSkeletonClass parent_class;
 
 	/* vtable */
 	gboolean	 (*coldplug)		(UpDevice	*device);
