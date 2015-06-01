@@ -322,7 +322,7 @@ up_device_export_skeleton (UpDevice *device,
 	GError *error = NULL;
 
 	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (device),
-					  up_daemon_get_dbus_connection (device->priv->daemon),
+					  g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (device->priv->daemon)),
 					  object_path,
 					  &error);
 

@@ -36,12 +36,10 @@
 #include "up-backend.h"
 #include "up-daemon.h"
 
-#include "up-daemon-generated.h"
 #include "up-marshal.h"
 
 struct UpDaemonPrivate
 {
-	UpExportedDaemon 	*skeleton;
 	UpConfig		*config;
 	UpBackend		*backend;
 	UpDeviceList		*power_devices;
@@ -78,7 +76,7 @@ static gboolean	up_daemon_get_on_battery_local	(UpDaemon	*daemon);
 static gboolean	up_daemon_get_warning_level_local(UpDaemon	*daemon);
 static gboolean	up_daemon_get_on_ac_local 	(UpDaemon	*daemon);
 
-G_DEFINE_TYPE (UpDaemon, up_daemon, G_TYPE_OBJECT)
+G_DEFINE_TYPE (UpDaemon, up_daemon, UP_TYPE_EXPORTED_DAEMON_SKELETON)
 
 #define UP_DAEMON_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), UP_TYPE_DAEMON, UpDaemonPrivate))
 
@@ -452,10 +450,9 @@ up_daemon_register_power_daemon (UpDaemon *daemon,
 				 GDBusConnection *connection)
 {
 	GError *error = NULL;
-	UpDaemonPrivate *priv = daemon->priv;
 
 	/* export our interface on the bus */
-	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (priv->skeleton),
+	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (daemon),
 					  connection,
 					  "/org/freedesktop/UPower",
 					  &error);
@@ -555,7 +552,7 @@ up_daemon_set_lid_is_closed (UpDaemon *daemon, gboolean lid_is_closed)
 	}
 
 	g_debug ("lid_is_closed = %s", lid_is_closed ? "yes" : "no");
-	up_exported_daemon_set_lid_is_closed (priv->skeleton, lid_is_closed);
+	up_exported_daemon_set_lid_is_closed (UP_EXPORTED_DAEMON (daemon), lid_is_closed);
 }
 
 /**
@@ -573,7 +570,7 @@ up_daemon_set_lid_is_present (UpDaemon *daemon, gboolean lid_is_present)
 	}
 
 	g_debug ("lid_is_present = %s", lid_is_present ? "yes" : "no");
-	up_exported_daemon_set_lid_is_present (priv->skeleton, lid_is_present);
+	up_exported_daemon_set_lid_is_present (UP_EXPORTED_DAEMON (daemon), lid_is_present);
 }
 
 /**
@@ -582,9 +579,8 @@ up_daemon_set_lid_is_present (UpDaemon *daemon, gboolean lid_is_present)
 void
 up_daemon_set_on_battery (UpDaemon *daemon, gboolean on_battery)
 {
-	UpDaemonPrivate *priv = daemon->priv;
 	g_debug ("on_battery = %s", on_battery ? "yes" : "no");
-	up_exported_daemon_set_on_battery (priv->skeleton, on_battery);
+	up_exported_daemon_set_on_battery (UP_EXPORTED_DAEMON (daemon), on_battery);
 }
 
 static gboolean
@@ -902,7 +898,7 @@ up_daemon_device_added_cb (UpBackend *backend, GObject *native, UpDevice *device
 		g_warning ("INTERNAL STATE CORRUPT (device-added): not sending NULL, native:%p, device:%p", native, device);
 		return;
 	}
-	up_exported_daemon_emit_device_added (daemon->priv->skeleton, object_path);
+	up_exported_daemon_emit_device_added (UP_EXPORTED_DAEMON (daemon), object_path);
 }
 
 /**
@@ -930,7 +926,7 @@ up_daemon_device_removed_cb (UpBackend *backend, GObject *native, UpDevice *devi
 		g_warning ("INTERNAL STATE CORRUPT (device-removed): not sending NULL, native:%p, device:%p", native, device);
 		return;
 	}
-	up_exported_daemon_emit_device_removed (daemon->priv->skeleton, object_path);
+	up_exported_daemon_emit_device_removed (UP_EXPORTED_DAEMON (daemon), object_path);
 
 	/* finalise the object */
 	g_object_unref (device);
@@ -1008,14 +1004,13 @@ up_daemon_init (UpDaemon *daemon)
 							     NULL, g_free);
 	daemon->priv->idle_signals = g_hash_table_new (g_direct_hash, g_direct_equal);
 
-	daemon->priv->skeleton = up_exported_daemon_skeleton_new ();
-	up_exported_daemon_set_daemon_version (daemon->priv->skeleton, PACKAGE_VERSION);
+	up_exported_daemon_set_daemon_version (UP_EXPORTED_DAEMON (daemon), PACKAGE_VERSION);
 
-	g_signal_connect (daemon->priv->skeleton, "handle-enumerate-devices",
+	g_signal_connect (daemon, "handle-enumerate-devices",
 			  G_CALLBACK (up_daemon_enumerate_devices), daemon);
-	g_signal_connect (daemon->priv->skeleton, "handle-get-critical-action",
+	g_signal_connect (daemon, "handle-get-critical-action",
 			  G_CALLBACK (up_daemon_get_critical_action), daemon);
-	g_signal_connect (daemon->priv->skeleton, "handle-get-display-device",
+	g_signal_connect (daemon, "handle-get-display-device",
 			  G_CALLBACK (up_daemon_get_display_device), daemon);
 }
 
@@ -1067,7 +1062,6 @@ up_daemon_finalize (GObject *object)
 	g_clear_pointer (&priv->poll_timeouts, g_hash_table_destroy);
 	g_clear_pointer (&priv->idle_signals, g_hash_table_destroy);
 
-	g_object_unref (priv->skeleton);
 	g_object_unref (priv->power_devices);
 	g_object_unref (priv->display_device);
 	g_object_unref (priv->config);
@@ -1083,10 +1077,4 @@ UpDaemon *
 up_daemon_new (void)
 {
 	return UP_DAEMON (g_object_new (UP_TYPE_DAEMON, NULL));
-}
-
-GDBusConnection *
-up_daemon_get_dbus_connection (UpDaemon *daemon)
-{
-	return g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (daemon->priv->skeleton));
 }

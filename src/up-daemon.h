@@ -21,8 +21,7 @@
 #ifndef __UP_DAEMON_H__
 #define __UP_DAEMON_H__
 
-#include <gio/gio.h>
-
+#include <dbus/up-daemon-generated.h>
 #include "up-types.h"
 #include "up-device-list.h"
 
@@ -39,13 +38,13 @@ typedef struct UpDaemonPrivate UpDaemonPrivate;
 
 typedef struct
 {
-	GObject	parent;
+	UpExportedDaemonSkeleton parent;
 	UpDaemonPrivate	*priv;
 } UpDaemon;
 
 typedef struct
 {
-	GObjectClass		 parent_class;
+	UpExportedDaemonSkeletonClass parent_class;
 } UpDaemonClass;
 
 typedef enum
@@ -70,7 +69,6 @@ UpDeviceList	*up_daemon_get_device_list	(UpDaemon		*daemon);
 gboolean	 up_daemon_startup		(UpDaemon		*daemon,
 						 GDBusConnection 	*connection);
 void		 up_daemon_shutdown		(UpDaemon		*daemon);
-GDBusConnection *up_daemon_get_dbus_connection  (UpDaemon		*daemon);
 void		 up_daemon_set_lid_is_closed	(UpDaemon		*daemon,
 						 gboolean		 lid_is_closed);
 void		 up_daemon_set_lid_is_present	(UpDaemon		*daemon,
