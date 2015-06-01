@@ -22,7 +22,7 @@
 #ifndef __UP_WAKEUPS_H
 #define __UP_WAKEUPS_H
 
-#include <gio/gio.h>
+#include <dbus/up-wakeups-generated.h>
 
 G_BEGIN_DECLS
 
@@ -37,13 +37,13 @@ typedef struct UpWakeupsPrivate UpWakeupsPrivate;
 
 typedef struct
 {
-	GObject		 	 parent;
+	UpExportedWakeupsSkeleton parent;
 	UpWakeupsPrivate	*priv;
 } UpWakeups;
 
 typedef struct
 {
-	GObjectClass	parent_class;
+	UpExportedWakeupsSkeletonClass parent_class;
 } UpWakeupsClass;
 
 UpWakeups	*up_wakeups_new			(void);

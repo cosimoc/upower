@@ -29,7 +29,6 @@
 #include "up-wakeups.h"
 #include "up-daemon.h"
 #include "up-marshal.h"
-#include "up-wakeups-generated.h"
 #include "up-wakeup-item.h"
 
 static void     up_wakeups_finalize   (GObject		*object);
@@ -48,7 +47,6 @@ static gboolean	up_wakeups_timerstats_enable (UpWakeups *wakeups);
 struct UpWakeupsPrivate
 {
 	GPtrArray		*data;
-	UpExportedWakeups	*skeleton;
 	guint			 total_old;
 	guint			 total_ave;
 	guint			 poll_userspace_id;
@@ -57,7 +55,7 @@ struct UpWakeupsPrivate
 	gboolean		 polling_enabled;
 };
 
-G_DEFINE_TYPE (UpWakeups, up_wakeups, G_TYPE_OBJECT)
+G_DEFINE_TYPE (UpWakeups, up_wakeups, UP_TYPE_EXPORTED_WAKEUPS_SKELETON)
 
 /**
  * up_wakeups_get_cmdline:
@@ -300,12 +298,12 @@ up_wakeups_perhaps_data_changed (UpWakeups *wakeups)
 		else
 			wakeups->priv->total_ave = UP_WAKEUPS_TOTAL_SMOOTH_FACTOR * (gfloat) (total - wakeups->priv->total_old);
 
-		up_exported_wakeups_emit_total_changed (wakeups->priv->skeleton,
+		up_exported_wakeups_emit_total_changed (UP_EXPORTED_WAKEUPS (wakeups),
 							wakeups->priv->total_ave);
 	}
 
 	/* unconditionally emit */
-	up_exported_wakeups_emit_data_changed (wakeups->priv->skeleton);
+	up_exported_wakeups_emit_data_changed (UP_EXPORTED_WAKEUPS (wakeups));
 }
 
 /**
@@ -670,17 +668,15 @@ up_wakeups_init (UpWakeups *wakeups)
 	wakeups->priv = UP_WAKEUPS_GET_PRIVATE (wakeups);
 	wakeups->priv->data = g_ptr_array_new_with_free_func ((GDestroyNotify) g_object_unref);
 
-	wakeups->priv->skeleton = up_exported_wakeups_skeleton_new ();
-
 	/* test if we have an interface */
 	if (g_file_test (UP_WAKEUPS_SOURCE_KERNEL, G_FILE_TEST_EXISTS) ||
 	    g_file_test (UP_WAKEUPS_SOURCE_KERNEL, G_FILE_TEST_EXISTS)) {
-		up_exported_wakeups_set_has_capability (wakeups->priv->skeleton, TRUE);
+		up_exported_wakeups_set_has_capability (UP_EXPORTED_WAKEUPS (wakeups), TRUE);
 	}
 
-	g_signal_connect (wakeups->priv->skeleton, "handle-get-data",
+	g_signal_connect (wakeups, "handle-get-data",
 			  G_CALLBACK (up_wakeups_get_data), wakeups);
-	g_signal_connect (wakeups->priv->skeleton, "handle-get-total",
+	g_signal_connect (wakeups, "handle-get-total",
 			  G_CALLBACK (up_wakeups_get_total), wakeups);
 }
 
@@ -702,7 +698,6 @@ up_wakeups_finalize (GObject *object)
 	up_wakeups_timerstats_disable (wakeups);
 
 	g_ptr_array_unref (wakeups->priv->data);
-	g_object_unref (wakeups->priv->skeleton);
 
 	G_OBJECT_CLASS (up_wakeups_parent_class)->finalize (object);
 }
@@ -722,7 +717,7 @@ up_wakeups_register (UpWakeups *wakeups,
 {
 	GError *error = NULL;
 
-	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (wakeups->priv->skeleton),
+	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (wakeups),
 					  connection,
 					  "/org/freedesktop/UPower/Wakeups",
 					  &error);
