@@ -23,7 +23,7 @@
 #ifndef __UP_KBD_BACKLIGHT_H
 #define __UP_KBD_BACKLIGHT_H
 
-#include <gio/gio.h>
+#include <dbus/up-kbd-backlight-generated.h>
 
 G_BEGIN_DECLS
 
@@ -38,13 +38,13 @@ typedef struct UpKbdBacklightPrivate UpKbdBacklightPrivate;
 
 typedef struct
 {
-	GObject		  parent;
+	UpExportedKbdBacklightSkeleton parent;
 	UpKbdBacklightPrivate	 *priv;
 } UpKbdBacklight;
 
 typedef struct
 {
-	GObjectClass	parent_class;
+	UpExportedKbdBacklightSkeletonClass parent_class;
 } UpKbdBacklightClass;
 
 UpKbdBacklight	*up_kbd_backlight_new			(void);

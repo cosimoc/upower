@@ -35,7 +35,6 @@
 #include "up-kbd-backlight.h"
 #include "up-marshal.h"
 #include "up-daemon.h"
-#include "up-kbd-backlight-generated.h"
 #include "up-types.h"
 
 static void     up_kbd_backlight_finalize   (GObject	*object);
@@ -47,10 +46,9 @@ struct UpKbdBacklightPrivate
 	gint			 fd;
 	gint			 brightness;
 	gint			 max_brightness;
-	UpExportedKbdBacklight  *skeleton;
 };
 
-G_DEFINE_TYPE (UpKbdBacklight, up_kbd_backlight, G_TYPE_OBJECT)
+G_DEFINE_TYPE (UpKbdBacklight, up_kbd_backlight, UP_TYPE_EXPORTED_KBD_BACKLIGHT_SKELETON)
 
 /**
  * up_kbd_backlight_brightness_write:
@@ -88,7 +86,7 @@ up_kbd_backlight_brightness_write (UpKbdBacklight *kbd_backlight, gint value)
 
 	/* emit signal */
 	kbd_backlight->priv->brightness = value;
-	up_exported_kbd_backlight_emit_brightness_changed (kbd_backlight->priv->skeleton,
+	up_exported_kbd_backlight_emit_brightness_changed (UP_EXPORTED_KBD_BACKLIGHT (kbd_backlight),
 							   kbd_backlight->priv->brightness);
 
 out:
@@ -259,13 +257,11 @@ up_kbd_backlight_init (UpKbdBacklight *kbd_backlight)
 {
 	kbd_backlight->priv = UP_KBD_BACKLIGHT_GET_PRIVATE (kbd_backlight);
 
-	kbd_backlight->priv->skeleton = up_exported_kbd_backlight_skeleton_new ();
-
-	g_signal_connect (kbd_backlight->priv->skeleton, "handle-get-brightness",
+	g_signal_connect (kbd_backlight, "handle-get-brightness",
 			  G_CALLBACK (up_kbd_backlight_get_brightness), kbd_backlight);
-	g_signal_connect (kbd_backlight->priv->skeleton, "handle-get-max-brightness",
+	g_signal_connect (kbd_backlight, "handle-get-max-brightness",
 			  G_CALLBACK (up_kbd_backlight_get_max_brightness), kbd_backlight);
-	g_signal_connect (kbd_backlight->priv->skeleton, "handle-set-brightness",
+	g_signal_connect (kbd_backlight, "handle-set-brightness",
 			  G_CALLBACK (up_kbd_backlight_set_brightness), kbd_backlight);
 }
 
@@ -286,8 +282,6 @@ up_kbd_backlight_finalize (GObject *object)
 	/* close file */
 	if (kbd_backlight->priv->fd >= 0)
 		close (kbd_backlight->priv->fd);
-
-	g_object_unref (kbd_backlight->priv->skeleton);
 
 	G_OBJECT_CLASS (up_kbd_backlight_parent_class)->finalize (object);
 }
@@ -313,7 +307,7 @@ up_kbd_backlight_register (UpKbdBacklight *kbd_backlight,
 		return;
 	}
 
-	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (kbd_backlight->priv->skeleton),
+	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (kbd_backlight),
 					  connection,
 					  "/org/freedesktop/UPower/KbdBacklight",
 					  &error);
