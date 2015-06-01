@@ -33,7 +33,6 @@
 #include <dirent.h>
 
 #include "up-kbd-backlight.h"
-#include "up-marshal.h"
 #include "up-daemon.h"
 #include "up-types.h"
 

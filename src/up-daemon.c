@@ -36,8 +36,6 @@
 #include "up-backend.h"
 #include "up-daemon.h"
 
-#include "up-marshal.h"
-
 struct UpDaemonPrivate
 {
 	UpConfig		*config;

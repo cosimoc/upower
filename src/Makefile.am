@@ -28,16 +28,6 @@ UPOWER_LIBS = \
 	$(top_builddir)/dbus/libupower-dbus.la			\
 	$(top_builddir)/libupower-glib/libupower-glib.la
 
-BUILT_SOURCES =							\
-	up-marshal.h						\
-	up-marshal.c
-
-up-marshal.h: up-marshal.list
-	glib-genmarshal $< --prefix=up_marshal --header > $@
-
-up-marshal.c: up-marshal.list
-	echo "#include \"up-marshal.h\"" > $@ && glib-genmarshal $< --prefix=up_marshal --body >> $@
-
 libexec_PROGRAMS = upowerd
 
 upowerd_SOURCES =						\
@@ -185,7 +175,6 @@ MAINTAINERCLEANFILES =						\
 	$(dbusservice_DATA)
 
 EXTRA_DIST =							\
-	up-marshal.list						\
 	$(systemdservice_in_files)				\
 	$(dbusservice_in_files)					\
 	$(dbusconf_in_files)

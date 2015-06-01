@@ -35,7 +35,6 @@
 #include "up-history.h"
 #include "up-history-item.h"
 #include "up-stats-item.h"
-#include "up-marshal.h"
 
 struct UpDevicePrivate
 {

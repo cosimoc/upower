@@ -28,7 +28,6 @@
 
 #include "up-wakeups.h"
 #include "up-daemon.h"
-#include "up-marshal.h"
 #include "up-wakeup-item.h"
 
 static void     up_wakeups_finalize   (GObject		*object);
